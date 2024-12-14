@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-set(SOURCES common.h
+set(FDAV_SOURCES common.h
             fvad.c
             signal_processing/division_operations.c
             signal_processing/energy.c
@@ -20,12 +20,15 @@ set(SOURCES common.h
             vad/vad_sp.h
             vad/vad_sp.c)
 
-add_library(fvad STATIC ${SOURCES})
+if(ESP_PLATFORM)
+	idf_component_register(SRCS ${FDAV_SOURCES}
+                       INCLUDE_DIRS "include")
+					   
+else()
+	add_library(fvad STATIC ${FDAV_SOURCES})
 
-target_include_directories(fvad
-    PUBLIC
-        ../include
-)
+	target_include_directories(fvad PUBLIC ./include)
 
-set_property(TARGET fvad PROPERTY POSITION_INDEPENDENT_CODE 1)
-install(TARGETS fvad DESTINATION lib)
+	set_property(TARGET fvad PROPERTY POSITION_INDEPENDENT_CODE 1)
+	install(TARGETS fvad DESTINATION lib)
+endif()

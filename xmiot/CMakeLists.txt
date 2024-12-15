@@ -4,8 +4,9 @@ file(GLOB XMIOT_SRC_FILES *.c)
 
 if(ESP_PLATFORM)
 	idf_component_register(SRCS ${XMIOT_SRC_FILES}
-                       INCLUDE_DIRS ".")
-
+                       INCLUDE_DIRS "."
+					   PRIV_REQUIRES mbedtls json lgnyy__yos)
+					   
 else()
 	add_library(yos STATIC ${XMIOT_SRC_FILES})
 

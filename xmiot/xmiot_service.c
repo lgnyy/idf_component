@@ -50,12 +50,12 @@ end:
 
 #define miio_sign_nonce(ssecurity, nonce, output, max_out_size) xmiot_crypto_md_base64("SHA256", ssecurity, nonce, output, max_out_size)
 
-static int miio_sign_data_ue(const cJSON* obj, cJSON_bool is_uri_encode, char** output) {
+static int miio_sign_data_ue(const cJSON* obj, char** output) {
 	char* _nonce = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(obj, "_nonce"));
 	char* data = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(obj, "data"));
 	char* signature = cJSON_GetStringValue(cJSON_GetObjectItemCaseSensitive(obj, "signature"));
 	
-	char* msg = (char*)malloc(256 + strlen(data));
+	char* msg = (char*)malloc(256 + strlen(data)*3);
 	if (msg == NULL) {
 		return XMIOT_SERVICE_ERR_NO_MEM;
 	}
@@ -161,7 +161,7 @@ static int miio_request(const char* uri, const cJSON* data,
 		goto end;
 	}
 
-	ret = miio_sign_data_ue(tmp, 1, &qdata);
+	ret = miio_sign_data_ue(tmp, &qdata);
 	if (ret != 0) {
 		goto end;
 	}

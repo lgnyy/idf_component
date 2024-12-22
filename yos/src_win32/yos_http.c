@@ -105,6 +105,11 @@ int32_t yos_http_destory(yos_http_handle_t ctx)
 		free(ctx->response_header);
 	}
 
+	if (ctx->custom_header != NULL)
+	{
+		free(ctx->custom_header);
+	}
+
 	//memset(ctx, 0, sizeof(yos_http_context_t));
 	free(ctx);
 	return 0;

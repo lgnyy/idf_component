@@ -13,23 +13,41 @@
 
 static const char* _miio_url = "https://api.io.mi.com";
 
-static char cfg_username[20];
-static char cfg_deviceId[24];
-static char cfg_ssecurity[32];
-static char cfg_serviceToken[256];
+typedef struct _xmiot_service_context_t {
+  char username[20];
+	char deviceId[24];
+	char ssecurity[32];
+	char serviceToken[256];
+	char speakerDid[10];
+}xmiot_service_context_t;
 
 
-int xmiot_service_config(int (*read_cb)(void* arg, const char* key, char* value, size_t vsize), void* arg) {
-	read_cb(arg, "username", cfg_username, sizeof(cfg_username));
-	read_cb(arg, "deviceId", cfg_deviceId, sizeof(cfg_deviceId));
-	read_cb(arg, "ssecurity", cfg_ssecurity, sizeof(cfg_ssecurity));
-	return read_cb(arg, "serviceToken", cfg_serviceToken, sizeof(cfg_serviceToken));
+xmiot_service_context_t* xmiot_service_create(
+	int (*read_cb)(void* arg, const char* key, char* value, size_t vsize), void* arg) {
+
+	xmiot_service_context_t* ctx = (xmiot_service_context_t *)malloc(sizeof(xmiot_service_context_t));
+	if (ctx != NULL) {
+		memset(ctx, 0, sizeof(*ctx));
+		read_cb(arg, "username", ctx->username, sizeof(ctx->username));
+		read_cb(arg, "deviceId", ctx->deviceId, sizeof(ctx->deviceId));
+		read_cb(arg, "ssecurity", ctx->ssecurity, sizeof(ctx->ssecurity));
+		read_cb(arg, "serviceToken", ctx->serviceToken, sizeof(ctx->serviceToken));
+		read_cb(arg, "speakerDid", ctx->speakerDid, sizeof(ctx->speakerDid));
+	}
+	return ctx;
 }
 
-static int miio_request_base(const char* uri, const char* data, char** resp) {
+int xmiot_service_destory(xmiot_service_context_t* ctx) {
+	if (ctx != NULL) {
+		free(ctx);
+	}
+	return 0;
+}
+
+static int miio_request_base(xmiot_service_context_t* ctx, const char* uri, const char* data, char** resp) {
 	int ret = XMIOT_SERVICE_ERR_INVALID_ARG;
 	char* url = (char*)malloc(16 + strlen(_miio_url) + strlen(uri));
-	char* headers = (char*)malloc(256 + strlen(cfg_serviceToken));
+	char* headers = (char*)malloc(256 + strlen(ctx->serviceToken));
 
 	if ((url == NULL) || (headers == NULL)) {
 		goto end;
@@ -37,7 +55,7 @@ static int miio_request_base(const char* uri, const char* data, char** resp) {
 
 	strcpy(url, _miio_url);
 	strcat(url, uri);
-	sprintf(headers, "x-xiaomi-protocal-flag-cli: PROTOCAL-HTTP2\r\nCookie: PassportDeviceId=%s; serviceToken=\"%s\"; userId=%s\r\nContent-Type: application/x-www-form-urlencoded", cfg_deviceId, cfg_serviceToken, cfg_username);
+	sprintf(headers, "x-xiaomi-protocal-flag-cli: PROTOCAL-HTTP2\r\nCookie: PassportDeviceId=%s; serviceToken=\"%s\"; userId=%s\r\nContent-Type: application/x-www-form-urlencoded", ctx->deviceId, ctx->serviceToken, ctx->username);
 
 	ret = yos_http_static_request(url, xmiot_cacert_usertrust(), headers, (const uint8_t*)data, strlen(data), (uint8_t**)resp, NULL);
 
@@ -148,7 +166,7 @@ end:
 	return ret;
 }
 
-static int miio_request(const char* uri, const cJSON* data, 
+static int miio_request(xmiot_service_context_t* ctx, const char* uri, const cJSON* data,
 	int (*cb)(void* arg, cJSON* resp), void* arg) {
 	char* qdata = NULL;
 	char* qresp = NULL;
@@ -156,7 +174,7 @@ static int miio_request(const char* uri, const cJSON* data,
 	cJSON* resp = NULL;
 	
 	// skip /app
-	int ret = miio_sign_data(uri+4, data, tmp, cfg_ssecurity);
+	int ret = miio_sign_data(uri+4, data, tmp, ctx->ssecurity);
 	if (ret != 0) {
 		goto end;
 	}
@@ -167,7 +185,7 @@ static int miio_request(const char* uri, const cJSON* data,
 	}
 	LOGD("qdata=%s\n", qdata);
 
-	ret = miio_request_base(uri, qdata, &qresp);
+	ret = miio_request_base(ctx, uri, qdata, &qresp);
 	if (ret != 0) {
 		goto end;
 	}
@@ -220,7 +238,8 @@ static int miio_find_speaker_did(void* arg, cJSON* resp) {
 	}
 	return -1;
 }
-int xmiot_service_get_speaker_did(char did[10]) {
+int xmiot_service_get_speaker_did(xmiot_service_context_t* ctx,
+	int (*write_cb)(void* arg, const char* key, const char* value), void* arg) {
 	int ret = XMIOT_SERVICE_ERR_NO_MEM;
 	cJSON* data = cJSON_CreateObject();
 	if (data == NULL) {
@@ -235,14 +254,17 @@ int xmiot_service_get_speaker_did(char did[10]) {
 		goto end;
 	}
 
-	ret = miio_request("/app/home/device_list", data, miio_find_speaker_did, did);
+	ret = miio_request(ctx, "/app/home/device_list", data, miio_find_speaker_did, ctx->speakerDid);
+	if (ret == 0) {
+		ret = write_cb(arg, "speakerDid", ctx->speakerDid);
+	}
 
 end:
 	cJSON_Delete(data);
 	return ret;
 }
 
-int xmiot_service_send_speaker_cmd(const char* did, const char* cmd) {
+int xmiot_service_send_speaker_cmd(xmiot_service_context_t* ctx, const char* cmd) {
 	int ret = XMIOT_SERVICE_ERR_NO_MEM;
 	cJSON* data = cJSON_CreateObject();
 	if (data == NULL) {
@@ -252,7 +274,7 @@ int xmiot_service_send_speaker_cmd(const char* did, const char* cmd) {
 	cJSON* params = cJSON_CreateObject();
 	cJSON_AddItemToObject(data, "params", params);
 
-	if (!cJSON_AddItemToObject(params, "did", cJSON_CreateString(did))) {
+	if (!cJSON_AddItemToObject(params, "did", cJSON_CreateString(ctx->speakerDid))) {
 		goto end;
 	}
 	if (!cJSON_AddItemToObject(params, "siid", cJSON_CreateNumber(5))) {
@@ -271,7 +293,7 @@ int xmiot_service_send_speaker_cmd(const char* did, const char* cmd) {
 		goto end;
 	}
 
-	ret = miio_request("/app/miotspec/action", data, NULL, NULL);
+	ret = miio_request(ctx, "/app/miotspec/action", data, NULL, NULL);
 
 end:
 	cJSON_Delete(data);

@@ -13,18 +13,6 @@
 
 static const char* _miio_url = "https://account.xiaomi.com";
 
-static char cfg_deviceId[20];
-
-int xmiot_account_config(int (*read_cb)(void* arg, const char* key, char* value, size_t vsize), void* arg) {
-	int ret = read_cb(arg, "deviceId", cfg_deviceId, sizeof(cfg_deviceId));
-	if (ret != 0) {
-		uint8_t r[12];
-		xmiot_crypto_rand(r, 12);
-		ret = xmiot_crypto_base64_encode(r, 12, cfg_deviceId, 20);
-	}
-	return ret;
-}
-
 static int miio_password_hash(const char* password, char* hash) {
 	uint8_t md[16];
 	xmiot_crypto_md("MD5", (const uint8_t*)password, strlen(password), md);
@@ -36,7 +24,7 @@ static int miio_password_hash(const char* password, char* hash) {
 	return 0;
 }
 
-static int miio_request_base(const char* uri, const char* data, char** resp) {
+static int miio_request_base(const char* uri, const char* deviceid, const char* data, char** resp) {
 	int ret = XMIOT_ACCOUNT_ERR_INVALID_ARG;
 	char* url = (char*)malloc(16 + strlen(_miio_url) + strlen(uri));
 	char* headers = (char*)malloc(256);
@@ -47,7 +35,7 @@ static int miio_request_base(const char* uri, const char* data, char** resp) {
 
 	strcpy(url, _miio_url);
 	strcat(url, uri);
-	sprintf(headers, "Cookie: sdkVersion=\"3.9\"; deviceId=\"%s\"\r\nContent-Type: application/x-www-form-urlencoded", cfg_deviceId);
+	sprintf(headers, "Cookie: sdkVersion=\"3.9\"; deviceId=\"%s\"\r\nContent-Type: application/x-www-form-urlencoded", deviceid);
 
 	size_t data_len = strlen(data);
 	if (data_len > 0) {
@@ -84,14 +72,14 @@ static int miio_check_code(const cJSON* resp) {
 	return (int)cJSON_GetNumberValue(code);
 }
 
-static int miio_login(const char* username, const char* password_hash, cJSON** json_result)
+static int miio_login(const char* deviceid, const char* username, const char* password_hash, cJSON** json_result)
 {
 	int ret = XMIOT_ACCOUNT_ERR_INVALID_ARG;
 	char* data2 = NULL;
 	char* resp = NULL;
 	cJSON* resp_json = NULL;
 
-	ret = miio_request_base("/pass/serviceLogin?sid=xiaomiio&_json=true", "", &resp);
+	ret = miio_request_base("/pass/serviceLogin?sid=xiaomiio&_json=true", deviceid, "", &resp);
 	if (ret != 0) {
 		goto end;
 	}
@@ -125,7 +113,7 @@ static int miio_login(const char* username, const char* password_hash, cJSON** j
 	
 		free(resp);
 		resp = NULL;
-		ret = miio_request_base("/pass/serviceLoginAuth2", data2, &resp);
+		ret = miio_request_base("/pass/serviceLoginAuth2", deviceid, data2, &resp);
 		if (ret != 0) {
 			goto end;
 		}
@@ -159,15 +147,15 @@ end:
 	return ret;
 }
 
-int xmiot_account_login(const char* username, const char* password, void** json_result)
+int xmiot_account_login(const char* deviceid, const char* username, const char* password, void** json_result)
 {
-	if (!username || !password) {
+	if (!deviceid || !username || !password) {
 		return XMIOT_ACCOUNT_ERR_INVALID_ARG;
 	}
 	char password_hash[32 + 4];
 	miio_password_hash(password, password_hash);
 
-	return miio_login(username, password_hash, (cJSON**)json_result);
+	return miio_login(deviceid, username, password_hash, (cJSON**)json_result);
 }
 
 static int32_t on_header_set_cookie_cb(void* arg, const char* value) {
@@ -236,18 +224,29 @@ end:
 	return ret;
 }
 
-int xmiot_account_login_auth(const char* username, const char* password,
+int xmiot_account_login_auth(const char* deviceid_, const char* username, const char* password,
 	int (*write_cb)(void* arg, const char* key, const char* value), void* arg)
 {
 	if (!username || !password || !write_cb) {
 		return XMIOT_ACCOUNT_ERR_INVALID_ARG;
 	}
+	
+	char deviceId[20];
+	if (deviceid_ && deviceid_[0]) {
+		strncpy(deviceId, deviceid_, 20);
+	}
+	else {
+		uint8_t r[12];
+		xmiot_crypto_rand(r, 12);
+		xmiot_crypto_base64_encode(r, 12, deviceId, 20);
+	}
+
 	char password_hash[32 + 4];
 	miio_password_hash(password, password_hash);
 
 	cJSON* resp_json = NULL;
 	char* service_token = NULL;
-	int ret = miio_login(username, password_hash, &resp_json);
+	int ret = miio_login(deviceId, username, password_hash, &resp_json);
 	if (ret != 0) {
 		goto end;
 	}
@@ -267,7 +266,7 @@ int xmiot_account_login_auth(const char* username, const char* password,
 
 	write_cb(arg, "username", username);
 	write_cb(arg, "password_hash", password_hash);
-	write_cb(arg, "deviceId", cfg_deviceId);
+	write_cb(arg, "deviceId", deviceId);
 	write_cb(arg, "ssecurity", ssecurity);
 	ret = write_cb(arg, "serviceToken", service_token);
 

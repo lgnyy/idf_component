@@ -22,22 +22,30 @@ typedef struct _xmiot_service_context_t {
 }xmiot_service_context_t;
 
 
-xmiot_service_context_t* xmiot_service_create(
-	int (*read_cb)(void* arg, const char* key, char* value, size_t vsize), void* arg) {
-
+void* xmiot_service_context_create(void) {
 	xmiot_service_context_t* ctx = (xmiot_service_context_t *)malloc(sizeof(xmiot_service_context_t));
 	if (ctx != NULL) {
 		memset(ctx, 0, sizeof(*ctx));
-		read_cb(arg, "username", ctx->username, sizeof(ctx->username));
-		read_cb(arg, "deviceId", ctx->deviceId, sizeof(ctx->deviceId));
-		read_cb(arg, "ssecurity", ctx->ssecurity, sizeof(ctx->ssecurity));
-		read_cb(arg, "serviceToken", ctx->serviceToken, sizeof(ctx->serviceToken));
-		read_cb(arg, "speakerDid", ctx->speakerDid, sizeof(ctx->speakerDid));
 	}
 	return ctx;
 }
 
-int xmiot_service_destory(xmiot_service_context_t* ctx) {
+int xmiot_service_load_config(void* ctx_,
+	int (*read_cb)(void* arg, const char* key, char* value, size_t vsize), void* arg) {
+	
+	if ((ctx_ == NULL) || (read_cb == NULL)) {
+		return XMIOT_SERVICE_ERR_INVALID_ARG;
+	}
+
+	xmiot_service_context_t* ctx = (xmiot_service_context_t*)ctx_;
+	read_cb(arg, "username", ctx->username, sizeof(ctx->username));
+	read_cb(arg, "deviceId", ctx->deviceId, sizeof(ctx->deviceId));
+	read_cb(arg, "ssecurity", ctx->ssecurity, sizeof(ctx->ssecurity));
+	read_cb(arg, "speakerDid", ctx->speakerDid, sizeof(ctx->speakerDid));
+	return read_cb(arg, "serviceToken", ctx->serviceToken, sizeof(ctx->serviceToken));
+}
+
+int xmiot_service_context_destory(void* ctx) {
 	if (ctx != NULL) {
 		free(ctx);
 	}
@@ -238,7 +246,7 @@ static int miio_find_speaker_did(void* arg, cJSON* resp) {
 	}
 	return -1;
 }
-int xmiot_service_get_speaker_did(xmiot_service_context_t* ctx,
+int xmiot_service_get_speaker_did(void* ctx_,
 	int (*write_cb)(void* arg, const char* key, const char* value), void* arg) {
 	int ret = XMIOT_SERVICE_ERR_NO_MEM;
 	cJSON* data = cJSON_CreateObject();
@@ -254,6 +262,7 @@ int xmiot_service_get_speaker_did(xmiot_service_context_t* ctx,
 		goto end;
 	}
 
+	xmiot_service_context_t* ctx = (xmiot_service_context_t*)ctx_;
 	ret = miio_request(ctx, "/app/home/device_list", data, miio_find_speaker_did, ctx->speakerDid);
 	if (ret == 0) {
 		ret = write_cb(arg, "speakerDid", ctx->speakerDid);
@@ -264,7 +273,7 @@ end:
 	return ret;
 }
 
-int xmiot_service_send_speaker_cmd(xmiot_service_context_t* ctx, const char* cmd) {
+int xmiot_service_send_speaker_cmd(void* ctx_, const char* cmd) {
 	int ret = XMIOT_SERVICE_ERR_NO_MEM;
 	cJSON* data = cJSON_CreateObject();
 	if (data == NULL) {
@@ -274,6 +283,7 @@ int xmiot_service_send_speaker_cmd(xmiot_service_context_t* ctx, const char* cmd
 	cJSON* params = cJSON_CreateObject();
 	cJSON_AddItemToObject(data, "params", params);
 
+	xmiot_service_context_t* ctx = (xmiot_service_context_t*)ctx_;
 	if (!cJSON_AddItemToObject(params, "did", cJSON_CreateString(ctx->speakerDid))) {
 		goto end;
 	}

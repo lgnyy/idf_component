@@ -15,10 +15,6 @@ extern "C" {
 #define XMIOT_SERVICE_ERR_NO_MEM      -2
 #define XMIOT_SERVICE_ERR_NO_CODE     -4
 
-/**
- * @brief xmiot service context
- */
-typedef struct _xmiot_service_context_t xmiot_service_context_t;
 
 /**
  * @brief create context
@@ -28,7 +24,17 @@ typedef struct _xmiot_service_context_t xmiot_service_context_t;
  * @return int  \c 0 on success.
 
  */
-xmiot_service_context_t* xmiot_service_create(
+void* xmiot_service_context_create(void);
+
+/**
+ * @brief load config
+ *
+ * @param read_cb
+ * @param arg
+ * @return int  \c 0 on success.
+
+ */
+int xmiot_service_load_config(void* ctx,
 	int (*read_cb)(void* arg, const char* key, char* value, size_t vsize), void* arg);
 
 /**
@@ -39,7 +45,7 @@ xmiot_service_context_t* xmiot_service_create(
  * @return int  \c 0 on success.
 
  */
-int xmiot_service_destory(xmiot_service_context_t* ctx);
+int xmiot_service_context_destory(void* ctx);
 
 /**
  * @brief Get did of wifispeaker
@@ -50,7 +56,7 @@ int xmiot_service_destory(xmiot_service_context_t* ctx);
  * @return int  \c 0 on success.
 
  */
-int xmiot_service_get_speaker_did(xmiot_service_context_t* ctx,
+int xmiot_service_get_speaker_did(void* ctx,
 	int (*write_cb)(void* arg, const char* key, const char* value), void* arg);
 
 /**
@@ -61,7 +67,7 @@ int xmiot_service_get_speaker_did(xmiot_service_context_t* ctx,
  * @return int  \c 0 on success.
 
  */
-int xmiot_service_send_speaker_cmd(xmiot_service_context_t* ctx, const char* cmd);
+int xmiot_service_send_speaker_cmd(void* ctx, const char* cmd);
 
 #ifdef __cplusplus
 }

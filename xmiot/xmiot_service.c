@@ -45,6 +45,17 @@ int xmiot_service_load_config(void* ctx_,
 	return read_cb(arg, "serviceToken", ctx->serviceToken, sizeof(ctx->serviceToken));
 }
 
+int xmiot_service_valid_speaker_did(void* ctx_) {
+	if (ctx_ == NULL) {
+		return XMIOT_SERVICE_ERR_INVALID_ARG;
+	}
+	xmiot_service_context_t* ctx = (xmiot_service_context_t*)ctx_;
+	if (ctx->speakerDid[0] == '\0') {
+		return XMIOT_SERVICE_ERR_INVALID_DID;
+	}
+	return 0;
+}
+
 int xmiot_service_context_destory(void* ctx) {
 	if (ctx != NULL) {
 		free(ctx);

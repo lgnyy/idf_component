@@ -14,6 +14,7 @@ extern "C" {
 #define XMIOT_SERVICE_ERR_INVALID_ARG -1
 #define XMIOT_SERVICE_ERR_NO_MEM      -2
 #define XMIOT_SERVICE_ERR_NO_CODE     -4
+#define XMIOT_SERVICE_ERR_INVALID_DID -5
 
 
 /**
@@ -46,6 +47,15 @@ int xmiot_service_load_config(void* ctx,
 
  */
 int xmiot_service_context_destory(void* ctx);
+
+/**
+ * @brief Valid did of wifispeaker
+ *
+ * @param ctx      a context
+ * @return int  \c 0 on success.
+
+ */
+int xmiot_service_valid_speaker_did(void* ctx);
 
 /**
  * @brief Get did of wifispeaker

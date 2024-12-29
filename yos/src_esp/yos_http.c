@@ -58,13 +58,13 @@ static esp_err_t _http_event_handler(esp_http_client_event_t *evt)
                 if ((ctx->output_buffer == NULL) || (content_len > ctx->output_alloc_len)) {
  			        ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA, content_len=%d", content_len); 
                     // We initialize output_buffer with 0 because it is used by strlen() and similar functions therefore should be null terminated.
-                    char* new_buffer = (char*)realloc(ctx->output_buffer, content_len);
+                    char* new_buffer = (char*)realloc(ctx->output_buffer, content_len + 1);
 					if (new_buffer == NULL){
                         ESP_LOGE(TAG, "Failed to allocate memory for output buffer");
                         return ESP_ERR_NO_MEM;
 					}
 					ctx->output_buffer = new_buffer;
-					ctx->output_alloc_len = content_len;
+					ctx->output_alloc_len = content_len + 1;
                     ctx->output_len = 0;
 				}  
                 
@@ -87,7 +87,9 @@ static esp_err_t _http_event_handler(esp_http_client_event_t *evt)
 			}
 			memcpy(ctx->output_buffer + ctx->output_len, evt->data, evt->data_len);
 			ctx->output_len += evt->data_len;
-			ctx->output_buffer[ctx->output_len] = '\0';
+			if (ctx->output_len < ctx->output_alloc_len){
+				ctx->output_buffer[ctx->output_len] = '\0';
+			}
 
             break;
         case HTTP_EVENT_ON_FINISH:
@@ -193,6 +195,7 @@ int32_t yos_http_set_headers(yos_http_handle_t ctx, const char* headers)
 			p1 = p2 + 2;
 		}
 	}
+	free(tmp);
 	return 0;
 }
 

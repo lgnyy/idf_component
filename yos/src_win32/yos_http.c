@@ -391,6 +391,9 @@ int32_t yos_http_request(yos_http_handle_t ctx, const uint8_t* data, uint32_t da
 					free(value_utf8);
 					free(lpValueBuffer);
 				}
+				else {
+					break;
+				}
 			}
 		}
 

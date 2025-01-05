@@ -97,12 +97,12 @@ static esp_err_t wifi_connect_ap(wifi_config_t* wifi_config, bool is_first)
 }
 
 
-static int wifi_load_config(void* ctx, nvs_cfg_read_cb_t read_cb, void* arg){
+static int wifi_load_config(void* ctx, yos_nvs_read_cb_t read_cb, void* arg){
     wifi_sta_config_t* sta = (wifi_sta_config_t*)ctx;
     read_cb(arg, "wifi_ssid", (char*)(sta->ssid), sizeof(sta->ssid));
     return read_cb(arg, "wifi_passwd", (char*)(sta->password), sizeof(sta->password));
 }
-static int wifi_save_config(void* ctx, nvs_cfg_write_cb_t write_cb, void* arg){
+static int wifi_save_config(void* ctx, yos_nvs_write_cb_t write_cb, void* arg){
     wifi_sta_config_t* sta = (wifi_sta_config_t*)ctx;
     write_cb(arg, "wifi_ssid", (char*)(sta->ssid));
     return write_cb(arg, "wifi_passwd", (char*)(sta->password));
@@ -139,7 +139,7 @@ int yos_wifi_station_init(void)
     };
 
     // 加载wifi配置
-    int ret = nvs_cfg_load(NVS_CFG_WIFI_INFO_NAMESPACE, wifi_load_config, &(wifi_config.sta));
+    int ret = yos_nvs_load(YOS_NVS_WIFI_INFO_NAMESPACE, wifi_load_config, &(wifi_config.sta));
     if (ret == 0){
         ret = wifi_connect_ap(&wifi_config, true);
     }
@@ -198,8 +198,8 @@ int yos_wifi_station_connect(const char* ssid, const char* password)
     int ret = wifi_connect_ap(&wifi_config, false);
     ESP_LOGW(TAG, "wifi_connect_ap: %d", ret);
     if (ret == 0){ // 连接成功后保存配置
-        int ret2 = nvs_cfg_save(NVS_CFG_WIFI_INFO_NAMESPACE, wifi_save_config, &(wifi_config.sta));
-        ESP_LOGW(TAG, "nvs_cfg_save: %d", ret2);
+        int ret2 = yos_nvs_save(YOS_NVS_WIFI_INFO_NAMESPACE, wifi_save_config, &(wifi_config.sta));
+        ESP_LOGW(TAG, "yos_nvs_save: %d", ret2);
     }
     return ret;
 }

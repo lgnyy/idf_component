@@ -14,7 +14,7 @@
 static const char* _miio_url = "https://api.io.mi.com";
 
 typedef struct _xmiot_service_context_t {
-  char username[20];
+	char username[20];
 	char deviceId[24];
 	char ssecurity[32];
 	char serviceToken[256];
@@ -236,7 +236,7 @@ end:
 	cJSON_Delete(resp);
 	yos_http_static_free(qresp);
 	free(qdata);
-	return 0;
+	return ret;
 }
 
 

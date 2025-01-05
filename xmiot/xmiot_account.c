@@ -224,26 +224,9 @@ end:
 	return ret;
 }
 
-int xmiot_account_login_auth(const char* deviceid_, const char* username, const char* password,
+static int login_auth_internal(const char* deviceId, const char* username, const char* password_hash,
 	int (*write_cb)(void* arg, const char* key, const char* value), void* arg)
 {
-	if (!username || !password || !write_cb) {
-		return XMIOT_ACCOUNT_ERR_INVALID_ARG;
-	}
-	
-	char deviceId[20];
-	if (deviceid_ && deviceid_[0]) {
-		strncpy(deviceId, deviceid_, 20);
-	}
-	else {
-		uint8_t r[12];
-		xmiot_crypto_rand(r, 12);
-		xmiot_crypto_base64_encode(r, 12, deviceId, 20);
-	}
-
-	char password_hash[32 + 4];
-	miio_password_hash(password, password_hash);
-
 	cJSON* resp_json = NULL;
 	char* service_token = NULL;
 	int ret = miio_login(deviceId, username, password_hash, &resp_json);
@@ -274,4 +257,52 @@ end:
 	cJSON_Delete(resp_json);
 	free(service_token);
 	return ret;
+
+}
+
+int xmiot_account_login_auth(const char* deviceid_, const char* username, const char* password,
+	int (*write_cb)(void* arg, const char* key, const char* value), void* arg)
+{
+	if (!username || !password || !write_cb) {
+		return XMIOT_ACCOUNT_ERR_INVALID_ARG;
+	}
+	
+	char deviceId[20];
+	if (deviceid_ && deviceid_[0]) {
+		strncpy(deviceId, deviceid_, 20);
+	}
+	else {
+		uint8_t r[12];
+		xmiot_crypto_rand(r, 12);
+		xmiot_crypto_base64_encode(r, 12, deviceId, 20);
+	}
+
+	char password_hash[32 + 4];
+	miio_password_hash(password, password_hash);
+
+	return login_auth_internal(deviceId, username, password_hash, write_cb, arg);
+}
+
+int xmiot_account_relogin_load_config(void* ctx,
+	int (*read_cb)(void* arg, const char* key, char* value, size_t vsize), void* arg) {
+
+	char* info = (char*)ctx;
+	if ((info == NULL) || (read_cb == NULL)) {
+		return XMIOT_ACCOUNT_ERR_INVALID_ARG;
+	}
+
+	read_cb(arg, "deviceId", info, 24);
+	read_cb(arg, "username", info + 24, 20);
+	return read_cb(arg, "password_hash", info + 24 + 20, 36);
+}
+
+int xmiot_account_relogin_auth(void* ctx,
+	int (*write_cb)(void* arg, const char* key, const char* value), void* arg)
+{
+	char* info = (char*)ctx;
+	if (!info || !write_cb) {
+		return XMIOT_ACCOUNT_ERR_INVALID_ARG;
+	}
+
+	return login_auth_internal(info, info+24, info+24+20, write_cb, arg);
 }

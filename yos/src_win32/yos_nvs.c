@@ -5,7 +5,7 @@
 
 static const char *TAG = "NVS";
 /* 用于读取nvs的命名空间 */
-static const char* namespace_array[] = { "wifi_info", "xmiot_info", "weather_info" };
+static const char* namespace_array[] = { "wifi_info", "miot_info", "xmiot_info", "weather_info" };
 
 
 static char _ini_file_name[MAX_PATH] = { 0 };

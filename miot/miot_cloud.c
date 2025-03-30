@@ -202,7 +202,7 @@ int miot_cloud_get_props(const char* access_token, const miot_cloud_param_did_t*
 	strcpy(data, "{\"datasource\":1, \"params\":[");
 	uint32_t i;
 	for (i = 0; i < count; i++) {
-		sprintf(data + strlen(data), "%s{\"did\":\"%s\", \"siid\":%d, \"piid\":%d}", ((i == 0) ? "" : ","), param_dids->did, param_dids->sidd, param_dids->pidd); 
+		sprintf(data + strlen(data), "%s{\"did\":\"%s\", \"siid\":%d, \"piid\":%d}", ((i == 0) ? "" : ","), param_dids->did, param_dids->siid, param_dids->piid); 
 		param_dids++;
 	}
 	strcat(data, "]}");
@@ -229,7 +229,7 @@ int miot_cloud_set_props(const char* access_token, const miot_cloud_param_did_t*
 	strcpy(data, "{\"datasource\":1, \"params\":[");
 	uint32_t i;
 	for (i = 0; i < count; i++) {
-		sprintf(data + strlen(data), "%s{\"did\":\"%s\", \"siid\":%d, \"piid\":%d, \"value\":%s}", ((i == 0) ? "" : ","), param_dids->did, param_dids->sidd, param_dids->pidd, param_dids->value);
+		sprintf(data + strlen(data), "%s{\"did\":\"%s\", \"siid\":%d, \"piid\":%d, \"value\":%s}", ((i == 0) ? "" : ","), param_dids->did, param_dids->siid, param_dids->piid, param_dids->value);
 		param_dids++;
 	}
 	strcat(data, "]}");

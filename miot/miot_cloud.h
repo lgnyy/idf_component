@@ -90,8 +90,8 @@ int miot_cloud_refresh_access_token_w(const char* redirect_url, const char* refr
  */
 typedef struct miot_cloud_param_did {
     const char* did;  /**< Device ID. */
-    int sidd;         /**< Service ID. */
-    int pidd;         /**< Property ID. */
+    int siid;         /**< Service ID. */
+    int piid;         /**< Property ID. */
     const char* value;/**< Property value. */
 } miot_cloud_param_did_t;
 

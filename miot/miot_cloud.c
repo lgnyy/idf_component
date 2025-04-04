@@ -127,7 +127,7 @@ int miot_cloud_get_access_token_w(const char* redirect_url, const char* code,
 	int (*write_cb)(void* arg, const char* key, const char* value), void* arg) {
 
 	cJSON* resp_json = NULL;
-	int ret = miot_cloud_get_access_token(redirect_url, code, &resp_json);
+	int ret = miot_cloud_get_access_token(redirect_url, code, (void**)&resp_json);
 	if (ret == 0) {
 		ret = __save_access_token(resp_json, write_cb, arg);
 	}
@@ -141,7 +141,7 @@ int miot_cloud_refresh_access_token_w(const char* redirect_url, const char* refr
 	int (*write_cb)(void* arg, const char* key, const char* value), void* arg) {
 
 	cJSON* resp_json = NULL;
-	int ret = miot_cloud_refresh_access_token(redirect_url, refresh_token, &resp_json);
+	int ret = miot_cloud_refresh_access_token(redirect_url, refresh_token, (void**)&resp_json);
 	if (ret == 0) {
 		ret = __save_access_token(resp_json, write_cb, arg);
 	}

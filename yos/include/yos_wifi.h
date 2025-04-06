@@ -49,6 +49,20 @@ int yos_wifi_station_scan(char* ssids, size_t max_size);
  */
 int yos_wifi_station_connect(const char* ssid, const char* password);
 
+/**
+ * @brief Retrieves the IPv4 address of the Wi-Fi station.
+ *
+ * This function obtains the current IPv4 address assigned to the Wi-Fi station
+ * and stores it in the provided character array.
+ *
+ * @param[out] ip A character array with a size of at least 20 bytes to store
+ *                the null-terminated IPv4 address string.
+ *                Example format: "192.168.1.1".
+ *
+ * @return int Returns 0 on success, or a negative value on failure.
+ */
+int yos_wifi_station_get_ip4(char ip[20]);
+
 #ifdef __cplusplus
 }
 #endif

@@ -44,3 +44,22 @@ yos_nvs_err_t yos_nvs_load(int namespace_type, int (load_cb)(void* ctx, yos_nvs_
 yos_nvs_err_t yos_nvs_save(int namespace_type, int (save_cb)(void* ctx, yos_nvs_write_cb_t write_cb, void* arg), void *ctx){
     return save_cb(ctx, yos_nvs_write, (void*)namespace_array[namespace_type]);
 }
+
+yos_nvs_err_t yos_nvs_load_ex(int namespace_type, yos_nvs_item_t* items, int count) {
+    void* arg = (void*)namespace_array[namespace_type];
+    int i, ret = 0;
+    for (i=0; (ret==0) && (i<count); i++) {
+        ret = yos_nvs_read(arg, items[i].key, items[i].value, items[i].vsize);
+    }
+    return ret;
+}
+
+yos_nvs_err_t yos_nvs_save_ex(int namespace_type, yos_nvs_item_t* items, int count) {
+    void* arg = (void*)namespace_array[namespace_type];
+    int i, ret = 0;
+    for (i = 0; (ret == 0) && (i < count); i++) {
+        ret = yos_nvs_write(arg, items[i].key, items[i].value);
+    }
+    return ret;
+
+}

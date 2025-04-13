@@ -83,3 +83,31 @@ yos_nvs_err_t yos_nvs_save(int namespace_type, int (save_cb)(void* ctx, yos_nvs_
     nvs_close(info_handle);
     return ret;
 }
+
+
+yos_nvs_err_t yos_nvs_load_ex(int namespace_type, yos_nvs_item_t* items, int count) {
+    nvs_handle info_handle;
+    esp_err_t ret = nvs_open(namespace_array[namespace_type], NVS_READONLY, &info_handle);
+
+    for (int i=0; (ret==ESP_OK) && (i<count); i++) {
+        ret = yos_nvs_read(info_handle, items[i].key, items[i].value, items[i].vsize);
+    }
+
+    nvs_close(info_handle);
+    return ret;
+}
+
+yos_nvs_err_t yos_nvs_save_ex(int namespace_type, yos_nvs_item_t* items, int count) {
+    nvs_handle info_handle;
+    esp_err_t ret = nvs_open(namespace_array[namespace_type], NVS_READWRITE, &info_handle);
+    
+    for (int i = 0; (ret == ESP_OK) && (i < count); i++) {
+        ret = yos_nvs_write(info_handle, items[i].key, items[i].value);
+    }
+
+    if (ret == ESP_OK){
+        ret = nvs_commit(info_handle);
+    }
+    nvs_close(info_handle);
+    return ret;
+}

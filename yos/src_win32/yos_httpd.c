@@ -57,8 +57,8 @@ yos_httpd_handle_t yos_httpd_create(uint16_t server_port)
 
 	ctx->uri_handler = NULL;
 	ctx->user_ctx = NULL;
-	ctx->thread = NULL;
-	// ctx->thread = CreateThread(NULL, 0, _thread_func, ctx, 0, NULL);
+	//ctx->thread = NULL;
+	ctx->thread = CreateThread(NULL, 0, _thread_func, ctx, 0, NULL);
 	return ctx;
 }
 
@@ -104,28 +104,6 @@ int32_t yos_unregister_uri_handler(yos_httpd_handle_t server, const char* uri)
 	return 0;
 }
 
-int32_t yos_httpd_wait_bits(yos_httpd_handle_t server, uint32_t value, uint32_t ms) {
-	if ((server == NULL) || (ms == 0)) {
-		return -1;
-	}
-	yos_http_context_t* ctx = (yos_http_context_t*)server;
-	time_t endt = time(NULL) + (ms / 1000);
-	ctx->is_running = 1;
-	do {
-		mg_mgr_poll(&(ctx->mgr), 1000);
-	} while (ctx->is_running && (endt > time(NULL)));
-	return ctx->is_running ? -1 : 0;
-}
-
-int32_t yos_httpd_set_bits(yos_httpd_handle_t server, uint32_t value) {
-	if (server == NULL) {
-		return - 1;
-	}
-	yos_http_context_t* ctx = (yos_http_context_t*)server;
-	ctx->is_running = value;
-	return 0;
-}
-
 
 yos_httpd_handle_t yos_httpd_req_get_handle(void* req) {
 	struct mg_connection* c = (struct mg_connection*)req;
@@ -159,7 +137,7 @@ const char* yos_httpd_req_get_uri(void* req, uint32_t* out_len)
 	if (c != NULL) {
 		struct mg_http_message* hm = (struct mg_http_message*)(c->fn_data);
 		if (out_len != NULL) {
-			*out_len = (uint32_t)(hm->query.buf - hm->uri.buf + hm->query.len);
+			*out_len = (uint32_t)(hm->query.buf? (hm->query.buf - hm->uri.buf + hm->query.len) : hm->uri.len);
 		}
 		return hm->uri.buf;
 	}
@@ -171,11 +149,50 @@ const char* yos_httpd_req_get_uri(void* req, uint32_t* out_len)
 	}
 }
 
+char* yos_httpd_req_recv_body(void* req, uint32_t* out_len)
+{
+	struct mg_connection* c = (struct mg_connection*)req;
+	if (c != NULL) {
+		struct mg_http_message* hm = (struct mg_http_message*)(c->fn_data);
+		if (out_len != NULL) {
+			*out_len = hm->body.len;
+		}
+		return hm->body.buf;
+	}
+	else {
+		if (out_len != NULL) {
+			*out_len = 0;
+		}
+		return NULL;
+	}
+}
+void yos_httpd_req_body_free(void* req, char* body)
+{
+	free(body);
+}
+
+int32_t yos_httpd_resp_set_hdr(void* req, const char* field, const char* value)
+{
+	return -1; // TODO
+}
+
 int32_t yos_httpd_resp_send(void* req, const char* buf, uint32_t buf_len)
 {
 	struct mg_connection* c = (struct mg_connection*)req;
 	if (c != NULL) {
-		mg_http_reply(c, 200, "", "%.*s", buf_len, buf);
+		const char* headers = ""; // TODO
+		mg_http_reply(c, 200, headers, "%.*s", buf_len, buf);
+	}
+	return 0;
+}
+
+int32_t yos_httpd_resp_send_file(void* req, const char* fname)
+{
+	struct mg_connection* c = (struct mg_connection*)req;
+	if (c != NULL) {
+		struct mg_http_message* hm = (struct mg_http_message*)(c->fn_data);
+		struct mg_http_serve_opts opts = { .root_dir = "." };
+		mg_http_serve_file(c, hm, fname, &opts);
 	}
 	return 0;
 }

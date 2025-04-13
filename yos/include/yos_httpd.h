@@ -73,40 +73,6 @@ int32_t yos_unregister_uri_handler(yos_httpd_handle_t server, const char* uri);
 
 
 /**
- * @brief Waits for specific bits to be set in the HTTP server's event flags.
- *
- * This function blocks the calling thread until the specified bits are set in the
- * event flags of the HTTP server or the timeout period elapses.
- *
- * @param server The handle to the HTTP server instance.
- * @param value The bitmask specifying the bits to wait for.
- * @param ms The timeout period in milliseconds. If set to 0, the function will not block.
- * 
- * @return 
- *     - A positive value indicating the bits that were set.
- *     - 0 if the timeout period elapsed without the specified bits being set.
- *     - A negative value if an error occurred.
- */
-int32_t yos_httpd_wait_bits(yos_httpd_handle_t server, uint32_t value, uint32_t ms);
-
-
-/**
- * @brief Sets specific bits in the HTTP server configuration.
- *
- * This function allows modifying the configuration of the HTTP server
- * by setting specific bits in the provided value.
- *
- * @param server The handle to the HTTP server instance.
- * @param value  The bitmask value to set in the server configuration.
- *
- * @return A 32-bit integer indicating the result of the operation.
- *         Typically, 0 indicates success, while a negative value
- *         indicates an error.
- */
-int32_t yos_httpd_set_bits(yos_httpd_handle_t server, uint32_t value);
-
-
-/**
  * @brief Retrieves the HTTP method of the given HTTP request.
  *
  * This function extracts and returns the HTTP method (e.g., "GET", "POST") 
@@ -153,6 +119,50 @@ void* yos_httpd_req_get_udata(void* req);
  */
 const char* yos_httpd_req_get_uri(void* req, uint32_t* out_len);
 
+/**
+ * @brief Retrieves the body of an HTTP request.
+ *
+ * This function extracts the body content of an HTTP request and returns it as a string.
+ * The length of the body is also provided through the output parameter.
+ *
+ * @param req A pointer to the HTTP request object.
+ * @param[out] out_len A pointer to a uint32_t variable where the length of the request body will be stored.
+ * @return A pointer to the request body as a null-terminated string. 
+ *         Returns NULL if the body is not available or an error occurs.
+ */
+char* yos_httpd_req_recv_body(void* req, uint32_t* out_len);
+
+
+/**
+ * @brief Frees the memory allocated for the HTTP request body.
+ *
+ * This function is used to release the memory associated with the HTTP request
+ * body that was previously allocated. It is important to call this function
+ * to avoid memory leaks after the request body is no longer needed.
+ *
+ * @param body A pointer to the memory holding the HTTP request body to be freed.
+ *             This pointer must have been allocated dynamically.
+ */
+void yos_httpd_req_body_free(void *req, char* body);
+
+
+/**
+ * @brief Sets a header field and its value in the HTTP response.
+ *
+ * This function allows you to add or modify a header field in the HTTP response.
+ * It is typically used to specify additional metadata or control information
+ * for the HTTP response.
+ *
+ * @param r Pointer to the HTTP request object.
+ * @param field The name of the header field to set (e.g., "Content-Type").
+ * @param value The value to assign to the header field (e.g., "application/json").
+ *
+ * @return
+ *  - 0 on success.
+ *  - Negative value on failure.
+ */
+int32_t yos_httpd_resp_set_hdr(void *req, const char *field, const char *value);
+
 
 /**
  * @brief Send response to client
@@ -164,6 +174,21 @@ const char* yos_httpd_req_get_uri(void* req, uint32_t* out_len);
  * @return 0 success/other failure
  */
 int32_t yos_httpd_resp_send(void *req, const char *buf, uint32_t buf_len);
+
+/**
+ * @brief Sends a file as an HTTP response.
+ *
+ * This function is used to send the contents of a specified file as the
+ * response to an HTTP request.
+ *
+ * @param req A pointer to the HTTP request object.
+ * @param fname The path to the file to be sent as the response.
+ * 
+ * @return 
+ *      - 0 on success.
+ *      - A negative value indicating an error code on failure.
+ */
+int32_t yos_httpd_resp_send_file(void* req, const char* fname);
 
 
 #ifdef __cplusplus

@@ -95,6 +95,9 @@ typedef struct miot_cloud_param_did {
     const char* value;/**< Property value. */
 } miot_cloud_param_did_t;
 
+int miot_cloud_api_post(const char* access_token, const char* url_path, const uint8_t* data, uint32_t data_len, uint8_t** resp, uint32_t* resp_len);
+void miot_cloud_free(void* ptr);
+
 /**
  * @brief Retrieve a single property of a device.
  *

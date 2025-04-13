@@ -185,6 +185,17 @@ end:
 	return ret;
 }
 
+int miot_cloud_api_post(const char* access_token, const char* url_path, const uint8_t* data, uint32_t data_len, uint8_t** resp, uint32_t* resp_len) {
+	char url[256], header[512];
+	sprintf(url, "https://%s%s", _oauth2_api_host, url_path);
+	sprintf(header, "Host: %s\r\nX-Client-BizId: haapi\r\nContent-Type: application/json\r\nAuthorization: Bearer%s\r\nX-Client-AppId: %s", _oauth2_api_host, access_token, _oauth2_client_id);
+	return yos_http_static_request(url, _oauth_ca_cert, header, data, data_len, resp, resp_len);
+}
+
+void miot_cloud_free(void* ptr) {
+	yos_http_static_free(ptr);
+}
+
 int miot_cloud_get_prop(const char* access_token, const char* did, int siid, int piid, void** resp_json) {
 	char data[256];
 	sprintf(data, "{\"datasource\":1, \"params\":[{\"did\":\"%s\", \"siid\":%d, \"piid\":%d}]}", did, siid, piid);

@@ -11,24 +11,40 @@ typedef struct yos_http_context
 {
 	struct mg_mgr mgr;  // Declare event manager
 	struct mg_connection* listen_c;
-	yos_httpd_uri_handler_t uri_handler;
+	yos_httpd_uri_handler_t uri_handler; // TODO: multi-instance
 	void* user_ctx;
 	HANDLE thread;
 	uint32_t is_running : 1;
 }yos_http_context_t;
 
+typedef struct yos_http_req_ext
+{
+	void* ev_data;
+	char* headers;
+}yos_http_req_ext_t;
+#define _yos_httpd_get_req_ext(c) ((yos_http_req_ext_t*)(c+1))
+#define _yos_httpd_get_req_message(c) ((struct mg_http_message*)(_yos_httpd_get_req_ext(c)->ev_data))
 
 // HTTP server event handler function
 static void ev_handler(struct mg_connection* c, int ev, void* ev_data) {
 	if (ev == MG_EV_HTTP_MSG) {
 		yos_http_context_t* ctx = (yos_http_context_t*)(c->mgr);
 		if (ctx->uri_handler != NULL) {
-			c->fn_data = ev_data; // c->fd = ev_data;
+			_yos_httpd_get_req_ext(c)->ev_data = ev_data;
+			if (_yos_httpd_get_req_ext(c)->headers != NULL) {
+				_yos_httpd_get_req_ext(c)->headers[0] = '\0';
+			}
 			ctx->uri_handler(c);
 		}
 	}
-	else if (ev == MG_EV_WAKEUP) {	
+	else if (ev == MG_EV_WAKEUP) {
 		((yos_http_context_t*)(c->mgr))->is_running = 0;
+	}
+	else if (ev == MG_EV_CLOSE) {
+		if (_yos_httpd_get_req_ext(c)->headers != NULL) {
+			free(_yos_httpd_get_req_ext(c)->headers);
+			_yos_httpd_get_req_ext(c)->headers = NULL;
+		}
 	}
 }
 
@@ -52,6 +68,7 @@ yos_httpd_handle_t yos_httpd_create(uint16_t server_port)
 	}
 
 	mg_mgr_init(&(ctx->mgr));  // Initialise event manager
+	ctx->mgr.extraconnsize = sizeof(yos_http_req_ext_t);
 	ctx->listen_c = mg_http_listen(&(ctx->mgr), url, ev_handler, NULL);  // Setup listener
 	//mg_wakeup_init(&(ctx->mgr));
 
@@ -122,7 +139,7 @@ void* yos_httpd_req_get_udata(void* req) {
 const char* yos_httpd_req_get_method(void* req) {
 	struct mg_connection* c = (struct mg_connection*)req;
 	if (c != NULL) {
-		struct mg_http_message* hm = (struct mg_http_message*)(c->fn_data);
+		struct mg_http_message* hm = _yos_httpd_get_req_message(c);
 		char* method = alloca(hm->method.len + 1);
 		memcpy(method, hm->method.buf, hm->method.len);
 		method[hm->method.len] = '\0';
@@ -135,7 +152,7 @@ const char* yos_httpd_req_get_uri(void* req, uint32_t* out_len)
 {
 	struct mg_connection* c = (struct mg_connection*)req;
 	if (c != NULL) {
-		struct mg_http_message* hm = (struct mg_http_message*)(c->fn_data);
+		struct mg_http_message* hm = _yos_httpd_get_req_message(c);
 		if (out_len != NULL) {
 			*out_len = (uint32_t)(hm->query.buf? (hm->query.buf - hm->uri.buf + hm->query.len) : hm->uri.len);
 		}
@@ -153,7 +170,7 @@ char* yos_httpd_req_recv_body(void* req, uint32_t* out_len)
 {
 	struct mg_connection* c = (struct mg_connection*)req;
 	if (c != NULL) {
-		struct mg_http_message* hm = (struct mg_http_message*)(c->fn_data);
+		struct mg_http_message* hm = _yos_httpd_get_req_message(c);
 		if (out_len != NULL) {
 			*out_len = hm->body.len;
 		}
@@ -168,19 +185,31 @@ char* yos_httpd_req_recv_body(void* req, uint32_t* out_len)
 }
 void yos_httpd_req_body_free(void* req, char* body)
 {
-	free(body);
 }
 
 int32_t yos_httpd_resp_set_hdr(void* req, const char* field, const char* value)
 {
-	return -1; // TODO
+	struct mg_connection* c = (struct mg_connection*)req;
+	char* headers = _yos_httpd_get_req_ext(c)->headers;
+	size_t headers_len = (headers != NULL)? strlen(headers) : 0;
+	char* new_headers = realloc(headers, headers_len + strlen(field) + strlen(value) + 64);
+	if (new_headers == NULL) {
+		return -1;
+	}
+	headers = new_headers + headers_len;
+	strcpy(headers, field);
+	strcat(headers, "= ");
+	strcat(headers, value);
+	strcat(headers, "\r\n");
+	_yos_httpd_get_req_ext(c)->headers = new_headers;
+	return 0; 
 }
 
 int32_t yos_httpd_resp_send(void* req, const char* buf, uint32_t buf_len)
 {
 	struct mg_connection* c = (struct mg_connection*)req;
 	if (c != NULL) {
-		const char* headers = ""; // TODO
+		const char* headers = _yos_httpd_get_req_ext(c)->headers;
 		mg_http_reply(c, 200, headers, "%.*s", buf_len, buf);
 	}
 	return 0;
@@ -189,8 +218,8 @@ int32_t yos_httpd_resp_send(void* req, const char* buf, uint32_t buf_len)
 int32_t yos_httpd_resp_send_file(void* req, const char* fname)
 {
 	struct mg_connection* c = (struct mg_connection*)req;
-	if (c != NULL) {
-		struct mg_http_message* hm = (struct mg_http_message*)(c->fn_data);
+	if (req != NULL) {
+		struct mg_http_message* hm = _yos_httpd_get_req_message(c);
 		struct mg_http_serve_opts opts = { .root_dir = "." };
 		mg_http_serve_file(c, hm, fname, &opts);
 	}

@@ -5,7 +5,7 @@
 
 static const char *TAG = "NVS";
 /* 用于读取nvs的命名空间 */
-static const char* namespace_array[] = { "wifi_info", "xmiot_info", "weather_info" };
+static const char* namespace_array[] = { "wifi_info", "miot_info", "xmiot_info", "weather_info" };
 
 
 #if !CONFIG_SWITCH86_UI_ENABLE // 没有UI，用配置信息
@@ -70,6 +70,9 @@ yos_nvs_err_t yos_nvs_load(int namespace_type, int (load_cb)(void* ctx, yos_nvs_
         ret = load_cb(ctx, yos_nvs_read_def, &namespace_type);
     }
 #endif
+    else {
+        ESP_LOGE(TAG, "nvs_open namespace_type:%d, ret:%d", namespace_type,ret);
+    }
     return ret;
 }
 
@@ -90,7 +93,7 @@ yos_nvs_err_t yos_nvs_load_ex(int namespace_type, yos_nvs_item_t* items, int cou
     esp_err_t ret = nvs_open(namespace_array[namespace_type], NVS_READONLY, &info_handle);
 
     for (int i=0; (ret==ESP_OK) && (i<count); i++) {
-        ret = yos_nvs_read(info_handle, items[i].key, items[i].value, items[i].vsize);
+        ret = yos_nvs_read((void*)info_handle, items[i].key, items[i].value, items[i].vsize);
     }
 
     nvs_close(info_handle);
@@ -102,7 +105,7 @@ yos_nvs_err_t yos_nvs_save_ex(int namespace_type, yos_nvs_item_t* items, int cou
     esp_err_t ret = nvs_open(namespace_array[namespace_type], NVS_READWRITE, &info_handle);
     
     for (int i = 0; (ret == ESP_OK) && (i < count); i++) {
-        ret = yos_nvs_write(info_handle, items[i].key, items[i].value);
+        ret = yos_nvs_write((void*)info_handle, items[i].key, items[i].value);
     }
 
     if (ret == ESP_OK){

@@ -7,6 +7,13 @@
 跨平台代码，支持WIN32和ESP32
 实现功能：http
 
+## miot
+米家集成，[参考](https://github.com/XiaoMi/ha_xiaomi_home/blob/main/doc/README_zh.md)
+- 使用 OAuth 2.0 的登录方式
+- 枚举设备
+- 设置、获取设备属性和执行指令
+
+
 ## xmiot
 小米物联网
 - 小米账号登录

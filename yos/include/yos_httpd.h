@@ -53,7 +53,7 @@ int32_t yos_httpd_destory(yos_httpd_handle_t server);
  *      - 0 on success.
  *      - A negative value on failure.
  */
-int32_t yos_register_uri_handler(yos_httpd_handle_t server, const char* uri, yos_httpd_uri_handler_t uri_handler, void* udata);
+int32_t yos_httpd_register_uri_handler(yos_httpd_handle_t server, const char* uri, yos_httpd_uri_handler_t uri_handler, void* udata);
 
 
 /**
@@ -69,7 +69,7 @@ int32_t yos_register_uri_handler(yos_httpd_handle_t server, const char* uri, yos
  *      - 0 on success.
  *      - Negative value on failure.
  */
-int32_t yos_unregister_uri_handler(yos_httpd_handle_t server, const char* uri);
+int32_t yos_httpd_unregister_uri_handler(yos_httpd_handle_t server, const char* uri);
 
 
 /**

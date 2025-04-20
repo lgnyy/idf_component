@@ -109,14 +109,14 @@ int32_t yos_httpd_destory(yos_httpd_handle_t server)
 	return 0;
 }
 
-int32_t yos_register_uri_handler(yos_httpd_handle_t server, const char* uri, yos_httpd_uri_handler_t uri_handler, void* udata)
+int32_t yos_httpd_register_uri_handler(yos_httpd_handle_t server, const char* uri, yos_httpd_uri_handler_t uri_handler, void* udata)
 {
 	yos_http_context_t* ctx = (yos_http_context_t*)server;
 	ctx->uri_handler = uri_handler;
 	ctx->user_ctx = udata;
 	return 0;
 }
-int32_t yos_unregister_uri_handler(yos_httpd_handle_t server, const char* uri)
+int32_t yos_httpd_unregister_uri_handler(yos_httpd_handle_t server, const char* uri)
 {
 	return 0;
 }

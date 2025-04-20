@@ -125,6 +125,7 @@ yos_http_handle_t yos_http_create(const char* url, const char* ca_cert)
 			.user_data = ctx,
 			//.disable_auto_redirect = true,
 			.buffer_size_tx = 2048,
+			.use_global_ca_store = (ca_cert == NULL), // If ca_cert is NULL, use global CA store
 			.cert_pem = ca_cert,
 			.cert_len = (ca_cert && (ca_cert[0]==0x30) && (ca_cert[1]==0x82))? (4+((uint8_t)(ca_cert[2]) << 8 | (uint8_t)(ca_cert[3]))) : 0,
 		};

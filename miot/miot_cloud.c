@@ -8,7 +8,12 @@
 #include "yos_http.h"
 #include "miot_cloud.h"
 
-#define LOGD printf
+static const char *TAG = "MIOT_CLOUD";
+#if(ESP_PLATFORM)
+#include "esp_log.h"
+#else
+#define ESP_LOGI( tag, format, ... ) printf("I %s " format "\n", tag, ##__VA_ARGS__)
+#endif
 
 static const char* _oauth2_client_id = "2882303761520251711";
 static const char* _oauth2_auth_url = "https://account.xiaomi.com/oauth2/authorize";
@@ -48,7 +53,7 @@ static int __get_token(const char* data_s, cJSON** resp_json) {
 	strcpy(url, _oauth_get_token_url);
 	strcat(url, "?data=");
 	yos_uri_encode(data_s, url+strlen(url));
-	LOGD("url=%s\n", url);
+	ESP_LOGI(TAG, "url=%s", url);
 
 	const char* header = "Content-Type: application/x-www-form-urlencoded";
 	uint8_t* resp = NULL;
@@ -61,7 +66,7 @@ static int __get_token(const char* data_s, cJSON** resp_json) {
 		ret = MIOT_CLOUD_ERR_NO_MEM;
 		goto end;
 	}
-	LOGD("resp=%s\n", (char*)resp);
+	ESP_LOGI(TAG, "resp=%s", (char*)resp);
 
 	*resp_json = cJSON_Parse((char*)resp);
 	if (*resp_json == NULL) {
@@ -89,7 +94,7 @@ int miot_cloud_get_access_token(const char* redirect_url, const char* code, void
 		return MIOT_CLOUD_ERR_NO_MEM;
 	}
 	sprintf(data, "{\"client_id\":%s,\"redirect_uri\":\"%s\",\"code\":\"%s\"}", _oauth2_client_id, redirect_url, code);
-	LOGD("data=%s\n", data);
+	ESP_LOGI(TAG, "data=%s", data);
 	int ret = __get_token(data, (cJSON**)resp_json);
 	free(data);
 	return ret;
@@ -101,7 +106,7 @@ int miot_cloud_refresh_access_token(const char* redirect_url, const char* refres
 		return MIOT_CLOUD_ERR_NO_MEM;
 	}
 	sprintf(data, "{\"client_id\":%s,\"redirect_uri\":\"%s\",\"refresh_token\":\"%s\"}", _oauth2_client_id, redirect_url, refresh_token);
-	LOGD("data=%s\n", data);
+	ESP_LOGI(TAG, "data=%s", data);
 	int ret = __get_token(data, (cJSON**)resp_json);
 	return ret;
 }
@@ -156,8 +161,8 @@ static int __mihome_api_post(const char* access_token, const char* url_path, con
 	char url[256], header[512];
 	sprintf(url, "https://%s%s", _oauth2_api_host, url_path);
 	sprintf(header, "Host: %s\r\nX-Client-BizId: haapi\r\nContent-Type: application/json\r\nAuthorization: Bearer%s\r\nX-Client-AppId: %s", _oauth2_api_host, access_token, _oauth2_client_id);
-	LOGD("url=%s\n", url);
-	LOGD("header=%s\n", header);
+	ESP_LOGI(TAG, "url=%s", url);
+	ESP_LOGI(TAG, "header=%s", header);
 
 	uint8_t* resp = NULL;
 	uint32_t resp_len = 0;
@@ -169,7 +174,7 @@ static int __mihome_api_post(const char* access_token, const char* url_path, con
 		ret = MIOT_CLOUD_ERR_NO_MEM;
 		goto end;
 	}
-	LOGD("resp=%s\n", (char*)resp);
+	ESP_LOGI(TAG, "resp=%s", (char*)resp);
 
 	if (resp_json != NULL) {
 		*resp_json = cJSON_Parse((char*)resp);
@@ -199,7 +204,7 @@ void miot_cloud_free(void* ptr) {
 int miot_cloud_get_prop(const char* access_token, const char* did, int siid, int piid, void** resp_json) {
 	char data[256];
 	sprintf(data, "{\"datasource\":1, \"params\":[{\"did\":\"%s\", \"siid\":%d, \"piid\":%d}]}", did, siid, piid);
-	LOGD("data=%s\n", data);
+	ESP_LOGI(TAG, "data=%s", data);
 
 	int ret = __mihome_api_post(access_token, "/app/v2/miotspec/prop/get", data, (cJSON **)resp_json);
 	return ret;
@@ -217,7 +222,7 @@ int miot_cloud_get_props(const char* access_token, const miot_cloud_param_did_t*
 		param_dids++;
 	}
 	strcat(data, "]}");
-	LOGD("data=%s\n", data);
+	ESP_LOGI(TAG, "data=%s", data);
 
 	int ret = __mihome_api_post(access_token, "/app/v2/miotspec/prop/get", data, (cJSON**)resp_json);
 	return ret;
@@ -226,7 +231,7 @@ int miot_cloud_get_props(const char* access_token, const miot_cloud_param_did_t*
 int miot_cloud_set_prop(const char* access_token, const char* did, int siid, int piid, const char* value, void** resp_json) {
 	char data[256];
 	sprintf(data, "{\"datasource\":1, \"params\":[{\"did\":\"%s\", \"siid\":%d, \"piid\":%d, \"value\":%s}]}", did, siid, piid, value);
-	LOGD("data=%s\n", data);
+	ESP_LOGI(TAG, "data=%s", data);
 
 	int ret = __mihome_api_post(access_token, "/app/v2/miotspec/prop/set", data, (cJSON**)resp_json);
 	return ret;
@@ -244,7 +249,7 @@ int miot_cloud_set_props(const char* access_token, const miot_cloud_param_did_t*
 		param_dids++;
 	}
 	strcat(data, "]}");
-	LOGD("data=%s\n", data);
+	ESP_LOGI(TAG, "data=%s", data);
 
 	int ret = __mihome_api_post(access_token, "/app/v2/miotspec/prop/set", data, (cJSON**)resp_json);
 	return ret;
@@ -253,7 +258,7 @@ int miot_cloud_set_props(const char* access_token, const miot_cloud_param_did_t*
 int miot_cloud_action(const char* access_token, const char* did, int siid, int aiid, const char* in_list, void** resp_json) {
 	char data[256];
 	sprintf(data, "{\"params\":{\"did\":\"%s\", \"siid\":%d, \"aiid\":%d, \"in\":[%s]}}", did, siid, aiid, in_list);
-	LOGD("data=%s\n", data);
+	ESP_LOGI(TAG, "data=%s", data);
 
 	int ret = __mihome_api_post(access_token, "/app/v2/miotspec/action", data, (cJSON**)resp_json);
 	return ret;

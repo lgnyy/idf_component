@@ -63,6 +63,12 @@ int yos_wifi_station_connect(const char* ssid, const char* password);
  */
 int yos_wifi_station_get_ip4(char ip[20]);
 
+/**
+ * @brief Check if Wi-Fi is connected and has obtained an IP address
+ * @return true: connected and IP acquired; false: not connected or no IP
+ */
+bool yos_wifi_is_online(void);
+
 #ifdef __cplusplus
 }
 #endif
